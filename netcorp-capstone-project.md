@@ -1,49 +1,47 @@
----
-tags: [ccna, modul2-network-access, capstone, projekt, portfolio, etherchannel, stp, wlc]
-modul: "2 - Network Access (Capstone-Projekt)"
-thema: "NetCorp Capstone-Erweiterung - EtherChannel, STP Root Bridge, WLC, Marketing-WLAN"
----
+# NetCorp GmbH – Capstone Extension (Module 2 Complete)
 
-# 🏢 Capstone-Erweiterung: NetCorp GmbH (Modul 2 komplett)
+Extension of the original NetCorp network project adding EtherChannel link aggregation, deliberate STP root bridge selection, a Wireless LAN Controller (WLC) with CAPWAP, and a 5th department (Marketing) with wireless access.
 
-> Erweiterung des ursprünglichen NetCorp-Projekts um EtherChannel, bewusste STP-Root-Bridge-Wahl, WLC/CAPWAP und eine 5. Abteilung (Marketing) mit WLAN-Zugang.
+## Topology
 
-## Was neu hinzugekommen ist
+![Capstone Topology](capstone-topology.png)
 
-| Bereich | Vorher | Jetzt |
+## What's New
+
+| Area | Before | Now |
 |---|---|---|
-| SW-A ↔ SW-CORE | 1 Trunk-Link | EtherChannel (Po1, LACP active) |
-| SW-B ↔ SW-CORE | 1 Trunk-Link | EtherChannel (Po2, LACP active) |
-| Root Bridge | zufällig (MAC-basiert) | Bewusst auf SW-CORE (Priorität 4096) |
-| Abteilungen | 4 (kabelgebunden) | + Marketing (VLAN 50, WLAN) |
-| Neue Geräte | – | WLC-2504, Lightweight AP, Autonomous AP, 2 Laptops |
+| SW-A ↔ SW-CORE | Single trunk link | EtherChannel (Po1, LACP active) |
+| SW-B ↔ SW-CORE | Single trunk link | EtherChannel (Po2, LACP active) |
+| Root Bridge | Random (MAC-based) | Deliberately set to SW-CORE (priority 4096) |
+| Departments | 4 (wired) | + Marketing (VLAN 50, wireless) |
+| New devices | – | WLC-2504, Lightweight AP, Autonomous AP, 2 laptops |
 
-## Neues VLAN
+## New VLAN Design
 
-| Abteilung | VLAN-ID | Subnetz | Gateway |
+| Department | VLAN ID | Subnet | Gateway |
 |---|---|---|---|
-| Marketing (WLAN) | 50 | 192.168.50.0/24 | 192.168.50.1 |
-| Wireless-Mgmt | 100 | 192.168.1.0/28 | 192.168.1.1 |
+| Marketing (Wireless) | 50 | 192.168.50.0/24 | 192.168.50.1 |
+| Wireless Management | 100 | 192.168.1.0/28 | 192.168.1.1 |
 
 ---
 
-## Konfigurationsschritte (Kernbefehle)
+## Configuration Highlights
 
-### EtherChannel SW-A/SW-B ↔ SW-CORE
+### EtherChannel (SW-A/SW-B ↔ SW-CORE)
 
 ```
 interface range gigabitEthernet 0/1-2
-speed 100 (oder 1000, je nach Hardware)
-duplex full
-switchport trunk encapsulation dot1q
-switchport trunk native vlan 999
-switchport mode trunk
-switchport nonegotiate
-channel-group 1 mode active
+ speed 100
+ duplex full
+ switchport trunk encapsulation dot1q
+ switchport trunk native vlan 999
+ switchport mode trunk
+ switchport nonegotiate
+ channel-group 1 mode active
 exit
 interface port-channel 1
-switchport trunk native vlan 999
-switchport mode trunk
+ switchport trunk native vlan 999
+ switchport mode trunk
 ```
 
 ### STP Root Bridge (SW-CORE)
@@ -52,93 +50,94 @@ switchport mode trunk
 spanning-tree vlan 10,20,30,40,999 priority 4096
 ```
 
-### DHCP für Wireless-Mgmt (R1)
+### DHCP for Wireless Management VLAN (R1)
 
 ```
 interface gigabitEthernet 0/0.100
-encapsulation dot1q 100
-ip address 192.168.1.1 255.255.255.240
+ encapsulation dot1q 100
+ ip address 192.168.1.1 255.255.255.240
 exit
 ip dhcp excluded-address 192.168.1.1 192.168.1.3
 ip dhcp pool VLAN100-POOL
-network 192.168.1.0 255.255.255.240
-default-router 192.168.1.1
+ network 192.168.1.0 255.255.255.240
+ default-router 192.168.1.1
 ```
 
-### Marketing-Subinterface (R1)
+### Marketing Subinterface (R1)
 
 ```
 interface gigabitEthernet 0/0.50
-encapsulation dot1q 50
-ip address 192.168.50.1 255.255.255.0
+ encapsulation dot1q 50
+ ip address 192.168.50.1 255.255.255.0
 ```
 
 ---
 
-## ✅ Testplan
+## Verified Test Results
 
-| Test | Ergebnis |
+| Test | Result |
 |---|---|
-| `show etherchannel summary` (beide Bündel) | ✅ Beide Po1/Po2 mit "P" (bundled) |
-| `show spanning-tree vlan 10` | ✅ SW-CORE "This bridge is the root" |
-| Lightweight AP → WLC Registrierung | ✅ Nach DHCP-Fix erfolgreich |
-| Marketing-Laptop → Marketing-Laptop (WLAN) | ✅ Erfolgreich (via Autonomous AP) |
-| Marketing → andere Abteilungen / Internet | ✅ |
+| `show etherchannel summary` (both bundles) | ✅ Both Po1/Po2 show "P" (bundled) |
+| `show spanning-tree vlan 10` | ✅ SW-CORE reports "This bridge is the root" |
+| Lightweight AP → WLC registration | ✅ Successful after DHCP fix |
+| Marketing laptop → Marketing laptop (WLAN) | ✅ Successful (via Autonomous AP) |
+| Marketing → other departments / Internet | ✅ Successful |
 
 ---
 
-## 🐛 Troubleshooting-Fälle (5 reale Probleme gelöst)
+## Troubleshooting Case Studies (5 Real Issues Resolved)
 
-### Fall 1: EtherChannel Duplex-Mismatch
+### Case 1: EtherChannel Duplex Mismatch
 **Symptom:** `%EC-5-CANNOT_BUNDLE2: Gig0/1 is not compatible with Gig0/2 ... duplex of Gig0/1 is half, Gig0/2 is full`
-**Ursache:** Auto-Negotiation hat auf beiden Interfaces unterschiedliche Duplex-Werte ausgehandelt.
-**Lösung:** `duplex full` und `speed` explizit auf beiden Interfaces gleichzeitig gesetzt (`interface range`).
-**Lernpunkt:** EtherChannel verlangt exakt identische Einstellungen auf allen Mitgliedsports — nie auf Auto-Negotiation verlassen.
 
-### Fall 2: Hardware-Port-Limit (keine freien Gigabit-Ports)
-**Symptom:** SW-CORE hatte keine freien GigabitEthernet-Ports mehr für die zweite EtherChannel-Verbindung.
-**Ursache:** 2960-Switches haben nur 2 Gigabit-Ports; beide waren schon für SW-A belegt.
-**Lösung:** FastEthernet-Ports auf SW-CORE-Seite genutzt, Speed auf beiden Enden explizit auf `100` gesetzt (Gigabit-Port kann sich auf 100 Mbit/s herunterhandeln).
-**Lernpunkt:** Port-Typ-Namen müssen auf beiden Kabelenden nicht identisch sein — nur Speed/Duplex müssen übereinstimmen.
+**Root cause:** Auto-negotiation resulted in different duplex settings on each interface.
 
-### Fall 3: Native VLAN Mismatch nach Neukonfiguration
-**Symptom:** `%CDP-4-NATIVE_VLAN_MISMATCH` zwischen SW-B und SW-CORE trotz vermeintlich korrekter Config.
-**Ursache:** Native-VLAN-Einstellung war nur auf einem der beiden Mitglieds-Interfaces angekommen, nicht auf beiden.
-**Lösung:** Komplette Neukonfiguration mit `shutdown` → `no channel-group` → alle Einstellungen explizit neu mit `interface range` gesetzt → `no shutdown`.
-**Lernpunkt:** Bei hartnäckigen EtherChannel-Fehlern hilft ein sauberer Reset (shutdown, Channel-Group entfernen, alles neu) zuverlässiger als einzelne Korrekturen.
+**Fix:** Explicitly set `duplex full` and `speed` on both interfaces simultaneously using `interface range`.
 
-### Fall 4: Lightweight AP registriert sich nicht beim WLC (0 APs)
-**Symptom:** Alle Switch-Interfaces up/up, AP-Konfiguration korrekt, trotzdem "Number of APs: 0" auf dem WLC.
-**Ursache:** Lightweight AP hat kein manuelles IP-Eingabefeld — er bezieht seine Management-IP zwingend per DHCP. Es gab keinen DHCP-Server im Wireless-Mgmt-VLAN.
-**Lösung:** DHCP-Pool auf R1 für das Subnetz 192.168.1.0/28 eingerichtet.
-**Lernpunkt:** Bei Geräten ohne manuelles IP-Feld (Lightweight APs, viele IoT-Geräte) zuerst prüfen, ob überhaupt ein DHCP-Server im jeweiligen VLAN existiert.
+**Takeaway:** EtherChannel requires identical settings across all member ports — never rely on auto-negotiation for bundle members.
 
-### Fall 5: WLAN-Client verbindet sich nicht (Frequenzband-Mismatch)
-**Symptom:** Laptop-WLAN-Adapter zeigte dauerhaft "Adapter is Inactive", keine Netzwerke in der Suche sichtbar.
-**Ursache 1:** Autonomous-AP-Konfiguration wurde zunächst auf "Port 1" vorgenommen, was sich als 5-GHz-Funkmodul herausstellte — der Laptop-Adapter (WPC300N) unterstützt nur 2,4 GHz.
-**Ursache 2:** Ein weiteres AP-Modell hatte gar kein 2,4-GHz-Funkmodul (Port 0 war dort nur der kabelgebundene Ethernet-Port).
-**Lösung:** Wechsel zu einem AP-Modell mit passendem 2,4-GHz-Funkmodul (AccessPoint-PT-AC), dort SSID/Security korrekt konfiguriert.
-**Lernpunkt:** Frequenzband-Kompatibilität zwischen AP und Client-Adapter ist eine Grundvoraussetzung, die vor jeder Security-/SSID-Fehlersuche geprüft werden sollte.
+### Case 2: Hardware Port Limitation (No Free Gigabit Ports)
+**Symptom:** SW-CORE had no free GigabitEthernet ports left for the second EtherChannel connection.
 
-## ⚠️ Dokumentierte Simulationseinschränkung
+**Root cause:** 2960 switches only have 2 Gigabit ports, both already used for the SW-A connection.
 
-Die vollständige Client-WLAN-Verbindung über einen **Lightweight AP + WLC** (Split-MAC-Architektur) konnte in Cisco Packet Tracer trotz erfolgreicher CAPWAP-Registrierung des APs nicht hergestellt werden — mehrere WLC-Konfigurationsseiten (z.B. 802.11b/g/n Network Enable) zeigen explizit "This feature is not supported in Packet Tracer". Dies ist eine bekannte, dokumentierte Grenze des Simulators, keine Fehlkonfiguration. Für den funktionierenden End-to-End-Test wurde daher ein zusätzlicher **Autonomous AP** eingesetzt, dessen Client-Konnektivität vollständig simulierbar ist.
+**Fix:** Used FastEthernet ports on the SW-CORE side instead, explicitly setting `speed 100` on both ends (a Gigabit port can negotiate down to 100 Mbps).
 
----
+**Takeaway:** Port type names don't need to match on both ends of a cable — only speed and duplex need to match.
 
-## Fachbegriffe Englisch 
+### Case 3: Native VLAN Mismatch After Reconfiguration
+**Symptom:** `%CDP-4-NATIVE_VLAN_MISMATCH` between SW-B and SW-CORE despite seemingly correct configuration.
 
-| Englisch 
-|---|---|
-| Duplex Mismatch 
-| Native VLAN Mismatch 
-| DHCP Pool | Grupi DHCP 
-| Frequency Band Mismatch 
-| Split-MAC
+**Root cause:** The native VLAN setting had only been applied to one of the two member interfaces, not both.
 
----
+**Fix:** Performed a clean reset — `shutdown` → `no channel-group` → reapplied all settings explicitly with `interface range` → `no shutdown`.
 
-## 🔗 Verlinkung
-- Basiert auf: [[Modul2-Projekt-NetCorp-Firmennetzwerk]]
-- Lektionen: [[Modul2-Lektion5-EtherChannel]], [[Modul2-Lektion4-Spanning-Tree-Protocol]], [[Modul2-Lektion6-Wireless-Architekturen]], [[Modul2-Lektion7-WLC-Konfiguration]]
-- Modul-Übersicht: [[Modul2-Network-Access]]
+**Takeaway:** For persistent EtherChannel errors, a clean reset (shut down, remove channel-group, reconfigure from scratch) is more reliable than patching individual settings.
+
+### Case 4: Lightweight AP Fails to Register with WLC (0 APs)
+**Symptom:** All switch interfaces up/up, AP configuration correct, yet the WLC reported "Number of APs: 0".
+
+**Root cause:** Lightweight APs have no manual IP address field — they rely entirely on DHCP for their management IP. No DHCP server existed on the wireless management VLAN.
+
+**Fix:** Configured a DHCP pool on R1 for the 192.168.1.0/28 subnet.
+
+**Takeaway:** For devices without a manual IP field (Lightweight APs, many IoT devices), verify a DHCP server exists on the relevant VLAN before troubleshooting further.
+
+### Case 5: Wireless Client Won't Connect (Frequency Band Mismatch)
+**Symptom:** The laptop's wireless adapter persistently showed "Adapter is Inactive," with no networks visible in scans.
+
+**Root cause 1:** The Autonomous AP was initially configured on "Port 1," which turned out to be a 5 GHz radio — the laptop's adapter (WPC300N) only supports 2.4 GHz.
+
+**Root cause 2:** A different AP model had no 2.4 GHz radio at all (its "Port 0" was only the wired Ethernet port).
+
+**Fix:** Switched to an AP model with a compatible 2.4 GHz radio and configured SSID/security correctly on it.
+
+**Takeaway:** Frequency band compatibility between AP and client adapter is a baseline requirement that should be checked before troubleshooting security or SSID settings.
+
+## Documented Simulator Limitation
+
+Full wireless client connectivity through a **Lightweight AP + WLC** (split-MAC architecture) could not be established in Cisco Packet Tracer, despite successful CAPWAP registration of the AP — several WLC configuration pages (e.g., enabling the 802.11b/g/n network) explicitly display "This feature is not supported in Packet Tracer." This is a known, documented limitation of the simulator, not a misconfiguration. An additional Autonomous AP, whose client connectivity is fully simulated, was used for the working end-to-end wireless test.
+
+## Context
+
+Built as a hands-on capstone project while studying for the CCNA 200-301 certification (Network Access domain: VLANs, trunking, inter-VLAN routing, STP, EtherChannel, WLC), as part of a FISI (Fachinformatiker Systemintegration) apprenticeship in Germany.
