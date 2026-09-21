@@ -126,15 +126,15 @@ Die vollständige Client-WLAN-Verbindung über einen **Lightweight AP + WLC** (S
 
 ---
 
-## Fachbegriffe (Englisch – Albanisch)
+## Fachbegriffe Englisch 
 
-| Englisch | Albanisch |
+| Englisch 
 |---|---|
-| Duplex Mismatch | Papërputhje Duplex |
-| Native VLAN Mismatch | Papërputhje e VLAN-it vendas |
-| DHCP Pool | Grupi DHCP |
-| Frequency Band Mismatch | Papërputhje e brezit të frekuencës |
-| Split-MAC | MAC e Ndarë |
+| Duplex Mismatch 
+| Native VLAN Mismatch 
+| DHCP Pool | Grupi DHCP 
+| Frequency Band Mismatch 
+| Split-MAC
 
 ---
 
